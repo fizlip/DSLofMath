@@ -15,7 +15,9 @@ data PRED v = Elem     (SET v)  (SET v)
             | Not      (PRED v)
 
 newtype Set = S [Set]
- deriving (Eq,Show)
+ deriving (Show)
+
+
 
 eval :: (Show v, Eq v) => Env v Set -> SET v -> Set
 eval env (Empty) = S []
@@ -26,25 +28,29 @@ eval env (Intersection s1 s2) = intersectSem (eval env s1) (eval env s2)
 
 -- Helper function for eval --
 unionSem :: Set -> Set -> Set
-unionSem s1 s2 = S (nub((unpack s1)++(unpack s2)))
+unionSem (S s1) (S s2) = S (nub(s1++s2))
                
 intersectSem :: Set -> Set -> Set 
-intersectSem s1 s2 = S (nub((unpack s1) `intersect` (unpack s2)))
+intersectSem (S s1)(S s2) = S (nub(s1 `intersect` s2))
 
 check :: (Show v,Eq v) => Env v Set -> PRED v -> Bool
 check env (Elem s1 s2)    = elemSem (eval env s1) (eval env s2)
-check env (Subset s1 s2)  = subsetSem env s1 s2
+check env (Subset s1 s2)  = subsetSem env s1 s2 --subSetSem 2 (eval env s1)(eval env s2)
 check env (And p1 p2)     = (check env p1) && (check env p2)
 check env (Or p1 p2)      = (check env p1) || (check env p2)
 check env (Implies p1 p2) 
                         | (check env p1) && (check env p2)              = True
                         | (not (check env p1)) && (check env p2)        = True
                         | (not (check env p1)) && (not ( check env p2)) = True
+                        | otherwise = False
 check env (Not p) = not (check env p) 
 
 -- Helper functions for check --
 elemSem :: Set -> Set -> Bool
-elemSem s1 s2 = s1 `elem` (unpack s2) 
+elemSem s1 (S (s2)) = s1 `elem` (s2) 
+
+--subSetSem2 :: Set -> Set -> Bool
+--subSetSem2 (S xs)(S ys) = 
 
 subsetSem ::(Show v, Eq v) =>  Env v Set -> SET v -> SET v -> Bool
 subsetSem env s1 s2 = eval env s1 == eval env (Intersection s1 s2)
@@ -78,9 +84,14 @@ lookup' ((x, y) : xys) v
 
 -- Calculates cardinality of a set
 card :: [Set] -> Int
+card [S[]]  = 0
 card [x]    = 1 
 card (x:xs) = 1 + card xs 
 
+length' :: Set -> Int
+length' (S []) = 0
+length' (S [x]) = 1
+length' (S (x:xs)) = 1 + length' (S xs) 
 
 --Unpacks a set. S [ S[] ] becomes S[]
 unpack :: Set -> [Set]
@@ -88,4 +99,18 @@ unpack (S [])     = [S[]]
 unpack (S [x])    = [x]
 unpack (S (x:xs)) = x: (unpack (S xs))
 
+
 type Env var dom = [(var,dom)]
+
+instance Eq Set where
+ (==) = myEq
+myEq:: Set -> Set -> Bool
+myEq (S [])(S []) = True
+myEq (S []) _ = False
+--myEq a@(S xs) b@(S ys) = (length' a == length' b)
+
+
+elems :: Set -> Set -> Bool
+elems x (S []) = False
+elems x (S[y]) = x == y
+elems x (S (y:ys))  = x == y && elems x (S ys)
