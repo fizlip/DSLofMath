@@ -107,6 +107,7 @@ instance Eq Set where
 myEq:: Set -> Set -> Bool
 myEq (S [])(S []) = True
 myEq (S []) _ = False
+myEq (S x)(S y) = x == y
 --myEq a@(S xs) b@(S ys) = (length' a == length' b)
 
 
