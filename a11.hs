@@ -59,12 +59,14 @@ vNSem ::(Show v, Eq v) =>  Env v Set -> Integer -> Set
 vNSem env n = eval env (vN n)
 
 claim1 :: (Show v,Eq v) => Env v Set -> Integer -> Integer -> Bool
-claim1 env n1 n2 = (n1 < n2) &&  check env (Subset (vN n1)(vN n2))	
+claim1 env n1 n2 = (n1 < n2) &&  check env (Subset (vN n1)(vN n2))
 
 claim2 :: (Show v, Eq v) => Env v Set -> Integer -> Bool
-claim2 _ 0 = True
-claim2 env n = check env (Elem (vN (n-1)) (vN n)) && claim2 env (n-1)
-
+claim2 _ 0     = True
+claim2 env n   = checkElem env n 1
+                        where checkElem e n i   | n-i == 0 = check e (Elem (vN 0) (vN n))
+                                                | check e (Elem (vN (n-i)) (vN n)) = (checkElem e n (i+1))
+                                                | otherwise = False
 
 -- Helper functions -- 
 --Looks up "var" in "env" and returns "dom"
