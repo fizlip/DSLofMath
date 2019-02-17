@@ -20,10 +20,10 @@ newtype Set = S [Set]
 
 
 eval :: (Show v, Eq v) => Env v Set -> SET v -> Set
-eval env (Empty) = S []
-eval env (Var a) = lookup' env a
-eval env (Singleton s) = S [eval env s]
-eval env (Union s1 s2) = unionSem (eval env s1) (eval env s2)
+eval env (Empty)              = S []
+eval env (Var a)              = lookup' env a
+eval env (Singleton s)        = S [eval env s]
+eval env (Union s1 s2)        = unionSem (eval env s1) (eval env s2)
 eval env (Intersection s1 s2) = intersectSem (eval env s1) (eval env s2)
 
 -- Helper function for eval --
@@ -35,15 +35,15 @@ intersectSem (S s1)(S s2) = S (nub(s1 `intersect` s2))
 
 check :: (Show v,Eq v) => Env v Set -> PRED v -> Bool
 check env (Elem s1 s2)    = elemSem (eval env s1) (eval env s2)
-check env (Subset s1 s2)  = subsetSem env s1 s2 --subSetSem 2 (eval env s1)(eval env s2)
+check env (Subset s1 s2)  = subsetSem2 (eval env s1) (eval env s2) 
 check env (And p1 p2)     = (check env p1) && (check env p2)
 check env (Or p1 p2)      = (check env p1) || (check env p2)
 check env (Implies p1 p2) 
-                        | (check env p1) && (check env p2)              = True
-                        | (not (check env p1)) && (check env p2)        = True
-                        | (not (check env p1)) && (not ( check env p2)) = True
-                        | otherwise = False
-check env (Not p) = not (check env p) 
+                          | (check env p1) && (check env p2)              = True
+                          | (not (check env p1)) && (check env p2)        = True
+                          | (not (check env p1)) && (not ( check env p2)) = True
+                          | otherwise = False
+check env (Not p)         = not (check env p) 
 
 -- Helper functions for check --
 {-elemSem :: Set -> Set -> Bool
@@ -57,11 +57,11 @@ elemSem x (S (y:ys))  = x == y || elemSem x (S ys)
 
 
 subsetSem ::(Show v, Eq v) =>  Env v Set -> SET v -> SET v -> Bool
-subsetSem env s1 s2 = eval env s1 == eval env (Intersection s1 s2)
+subsetSem env s1 s2         = eval env s1 == eval env (Intersection s1 s2)
 
 subsetSem2 :: Set -> Set -> Bool
-subsetSem2 (S [])     b = elemSem (S []) b
-subsetSem2 (S (x:xs)) b = elemSem x b && subsetSem2 (S xs) b
+subsetSem2 (S [])     b  = elemSem (S []) b
+subsetSem2 (S (x:xs)) b  = elemSem x b && subsetSem2 (S xs) b
 
 --Testing--
 ex1 = S [ S[S[S[]]] , S[S[]] , S[S[S[S[]]]] ]
@@ -71,7 +71,7 @@ e3 = S[S[]]
 e4 = S[S[S[S[]]]]
 e5 = S[S[S[]],S[S[]],S[ S[S[]],S[S[]]] ]
 
-
+env = [(0, S []),(1,S[S[]]),(2,S[S[S[]]]), (3,S[S[S[S[]]]]),(4,S[S[S[S[S[]]]]])]
 -- Task 3 von Neumann Encoding -- 
 vN ::  Integer -> SET v
 vN  0 = Empty
@@ -80,15 +80,20 @@ vN  n = Union (vN (n-1)) (Singleton (vN (n-1)))
 vNSem ::(Show v, Eq v) =>  Env v Set -> Integer -> Set
 vNSem env n = eval env (vN n)
 
-claim1 :: (Show v,Eq v) => Env v Set -> Integer -> Integer -> Bool
-claim1 env n1 n2 = (n1 <= n2) &&  check env (Subset (vN n1)(vN n2))
-
+claim1 :: (Show v,Eq v) => Env v Set -> Integer -> Integer -> String
+claim1 env n1 n2 = 
+    if ( (n1 <= n2)  && check env (Subset (vN n1)(vN n2))) 
+     then   show $ "If " ++ show n1 ++ " <= " ++ show n2 ++ " then " ++ show n1 ++ " is a subset of " ++ show n2 
+     else   show $ "If " ++ show n1 ++ " <= " ++ show n2 ++ " then " ++ show n1 ++ " is not a subset of " ++ show n2 
 claim2 :: (Show v, Eq v) => Env v Set -> Integer -> Bool
+{- 
 claim2 _ 0     = True
 claim2 env n   = checkElem env n 1
                         where checkElem e n i   | n-i == 0 = check e (Elem (vN 0) (vN n))
                                                 | check e (Elem (vN (n-i)) (vN n)) = (checkElem e n (i+1))
                                                 | otherwise = False
+-} 
+claim2 = undefined
 
 -- Helper functions -- 
 --Looks up "var" in "env" and returns "dom"
@@ -97,14 +102,6 @@ lookup' [ ] v = error ("lookup': variable " ++ show v ++ " not found")
 lookup' ((x, y) : xys) v 
           | x == v    = y
           | otherwise = lookup' xys v
-
-{-
--- Calculates cardinality of a set
-card :: [Set] -> Int
-card [S[]]  = 0
-card [x]    = 1 
-card (x:xs) = 1 + card xs 
--}
 
 length' :: Set -> Int
 length' (S []) = 0
@@ -128,11 +125,3 @@ myEq   (S [])      _    = False
 myEq   _         (S []) = False
 myEq   (S [x])  (S [y]) = x == y
 myEq a@(S xs) b@(S ys)  = subsetSem2 a b && subsetSem2 b a
---myEq a@(S xs) b@(S ys) = (length' a == length' b)
-
-{-
-elems :: Set -> Set -> Bool
-elems x (S []) = False
-elems x (S[y]) = x == y
-elems x (S (y:ys))  = x == y || elems x (S ys)
--}
