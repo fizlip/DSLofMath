@@ -42,22 +42,14 @@ check env (Implies p1 p2)
                           | (check env p1) && (check env p2)              = True
                           | (not (check env p1)) && (check env p2)        = True
                           | (not (check env p1)) && (not ( check env p2)) = True
-                          | otherwise = False
+                          | otherwise                                     = False
 check env (Not p)         = not (check env p) 
 
--- Helper functions for check --
-{-elemSem :: Set -> Set -> Bool
-elemSem s1 (S (s2)) = s1 `elem` (s2) 
--}
 elemSem :: Set -> Set -> Bool
 elemSem (S [])  _     = True -- The empty set is a subset of every set.
 elemSem _ (S [])      = False -- No elements in the empty set.
 elemSem x (S [y] )    = x == y
 elemSem x (S (y:ys))  = x == y || elemSem x (S ys)
-
-
-subsetSem ::(Show v, Eq v) =>  Env v Set -> SET v -> SET v -> Bool
-subsetSem env s1 s2         = eval env s1 == eval env (Intersection s1 s2)
 
 subsetSem2 :: Set -> Set -> Bool
 subsetSem2 (S [])     b  = elemSem (S []) b
@@ -72,6 +64,7 @@ e4 = S[S[S[S[]]]]
 e5 = S[S[S[]],S[S[]],S[ S[S[]],S[S[]]] ]
 
 env = [(0, S []),(1,S[S[]]),(2,S[S[S[]]]), (3,S[S[S[S[]]]]),(4,S[S[S[S[S[]]]]])]
+
 -- Task 3 von Neumann Encoding -- 
 vN ::  Integer -> SET v
 vN  0 = Empty
@@ -80,20 +73,30 @@ vN  n = Union (vN (n-1)) (Singleton (vN (n-1)))
 vNSem ::(Show v, Eq v) =>  Env v Set -> Integer -> Set
 vNSem env n = eval env (vN n)
 
+-- If n1 <= n2 then n1 should be a subset of n2.
 claim1 :: (Show v,Eq v) => Env v Set -> Integer -> Integer -> String
 claim1 env n1 n2 = 
     if ( (n1 <= n2)  && check env (Subset (vN n1)(vN n2))) 
-     then   show $ "If " ++ show n1 ++ " <= " ++ show n2 ++ " then " ++ show n1 ++ " is a subset of " ++ show n2 
+     then   show $ "If " ++ show n1 ++ " <= " ++ show n2 ++ " then " ++ show n1 ++ " is a subset of "     ++ show n2 
      else   show $ "If " ++ show n1 ++ " <= " ++ show n2 ++ " then " ++ show n1 ++ " is not a subset of " ++ show n2 
-claim2 :: (Show v, Eq v) => Env v Set -> Integer -> Bool
-{- 
-claim2 _ 0     = True
-claim2 env n   = checkElem env n 1
-                        where checkElem e n i   | n-i == 0 = check e (Elem (vN 0) (vN n))
-                                                | check e (Elem (vN (n-i)) (vN n)) = (checkElem e n (i+1))
-                                                | otherwise = False
--} 
-claim2 = undefined
+
+
+claim2 :: (Show v, Eq v) => Env v Set -> Integer -> String
+claim2 env n = if(eval env (vN n) == S (foo env (claim2Helper n)))
+               then show $ "The Von Neuman encoding of " ++ show n ++ " is equal to [0,1...," ++ show (n-1) ++ "]"
+               else show $ "The Von Neuman encoding of " ++ show n ++ " is not equal to [0,1...," ++ show (n-1) ++ "]"
+
+
+-- Takes an integer n and returns [vN  0, vN 1, vN 2,..., vN (n-1)], therefore 0 is undefined
+-- For example n = 2 returns [vN 0, vN 1].    
+claim2Helper :: Integer -> [SET v] 
+claim2Helper 0 = error ("Undefined")
+claim2Helper 1 = [Empty]
+claim2Helper n = [vN (n-1)] ++ claim2Helper(n-1)
+
+-- foo evalutes each element in the list that claim2Helper produces.
+foo :: (Show v, Eq v) => Env v Set -> [SET v] -> [Set]
+foo env a = map (eval env) a
 
 -- Helper functions -- 
 --Looks up "var" in "env" and returns "dom"
@@ -102,18 +105,6 @@ lookup' [ ] v = error ("lookup': variable " ++ show v ++ " not found")
 lookup' ((x, y) : xys) v 
           | x == v    = y
           | otherwise = lookup' xys v
-
-length' :: Set -> Int
-length' (S []) = 0
-length' (S [x]) = 1
-length' (S (x:xs)) = 1 + length' (S xs) 
-
---Unpacks a set. S [ S[] ] becomes S[]
-unpack :: Set -> [Set]
-unpack (S [])     = [S[]]
-unpack (S [x])    = [x]
-unpack (S (x:xs)) = x: (unpack (S xs))
-
 
 type Env var dom = [(var,dom)]
 
@@ -124,4 +115,4 @@ myEq   (S [])    (S []) = True
 myEq   (S [])      _    = False
 myEq   _         (S []) = False
 myEq   (S [x])  (S [y]) = x == y
-myEq a@(S xs) b@(S ys)  = subsetSem2 a b && subsetSem2 b a
+myEq a@(S xs) b@(S ys)  = subsetSem2 a b && subsetSem2 b a -- For example S [ S[], S[S[]]] == S [ S[S[]] , S[] ] will be true.
