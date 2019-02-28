@@ -1,0 +1,22 @@
+H(eval'', FunExp, FunSem)
+
+eval''(FunExp x y) /= FunSem (eval'' x) (eval'' y)
+
+x = 2
+y = 2
+
+eval :: FunExp -> Real
+derive :: FunExp -> FunExp
+
+We want to prove that 
+    eval'' (x :*: y) /= FunSemAdd (eval'' x) (eval'' y)
+
+is true.
+
+The expression evaluates to
+    (x * y)'' /= FunSemMul x'' y''
+
+and so
+    (x''y+x'y') + (x'*y'+x*y'') /= x'' * y''
+
+The RHS is obvously not equal to the RHS, the statement is thus proven.
