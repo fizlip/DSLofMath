@@ -80,18 +80,23 @@ fromIntegerTri = undefined
 sinTri :: (Num a, Floating a) =>  Tri a -> Tri a
 sinTri (Tri (f, f', f'')) = Tri (sin f, cos f', -sin f'')
 
-cosTri :: Tri a -> Tri a
-cosTri = undefined
+cosTri :: (Num a, Floating a) => Tri a -> Tri a
+cosTri (Tri (f,f', f'')) = Tri ( -sin f, -cos f', sin f'')
 
 expTri :: Tri a -> Tri a 
-expTri = undefined
+expTri (Tri (f, f', f'')) = undefined
 
 fromRationalTri :: Rational -> Tri a
 fromRationalTri = undefined
 
-divTri :: Tri a -> Tri a -> Tri a
-divTri = undefined
+-- (f, f', f'') / (g, g', g'') => (h, h', h'')
+-- h = f / g
+-- h' = D ( f / g ) = ((g * f' ) - (f * g')) / g*g
+-- h'' = DD ( f / g) = D ( ((g * f' ) - (f * g')) / g*g ) = 
 
+
+divTri ::(Num a, Fractional a) =>  Tri a -> Tri a -> Tri a
+divTri (Tri (f, f', f'')) (Tri (g, g', g'')) = Tri( (f / g) , ((g * f' ) - (f * g')) / g*g , undefined  )
 
 evalTri :: Tri a -> Integer
 evalTri = undefined

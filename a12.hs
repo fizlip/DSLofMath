@@ -35,7 +35,7 @@ intersectSem (S s1)(S s2) = S (nub(s1 `intersect` s2))
 
 check :: (Show v,Eq v) => Env v Set -> PRED v -> Bool
 check env (Elem s1 s2)    = elemSem (eval env s1) (eval env s2)
-check env (Subset s1 s2)  = subsetSem2 (eval env s1) (eval env s2) 
+check env (Subset s1 s2)  = subsetSem (eval env s1) (eval env s2) 
 check env (And p1 p2)     = (check env p1) && (check env p2)
 check env (Or p1 p2)      = (check env p1) || (check env p2)
 check env (Implies p1 p2) 
@@ -51,19 +51,10 @@ elemSem _ (S [])      = False -- No elements in the empty set.
 elemSem x (S [y] )    = x == y
 elemSem x (S (y:ys))  = x == y || elemSem x (S ys)
 
-subsetSem2 :: Set -> Set -> Bool
-subsetSem2 (S [])     b  = elemSem (S []) b
-subsetSem2 (S (x:xs)) b  = elemSem x b && subsetSem2 (S xs) b
+subsetSem :: Set -> Set -> Bool
+subsetSem (S [])     b  = elemSem (S []) b
+subsetSem (S (x:xs)) b  = elemSem x b && subsetSem2 (S xs) b
 
---Testing--
-ex1 = S [ S[S[S[]]] , S[S[]] , S[S[S[S[]]]] ]
-e0 = S[]
-e1 = S[ S[S[]] ]
-e3 = S[S[]]
-e4 = S[S[S[S[]]]]
-e5 = S[S[S[]],S[S[]],S[ S[S[]],S[S[]]] ]
-
-env = [(0, S []),(1,S[S[]]),(2,S[S[S[]]]), (3,S[S[S[S[]]]]),(4,S[S[S[S[S[]]]]])]
 
 -- Task 3 von Neumann Encoding -- 
 vN ::  Integer -> SET v
@@ -113,6 +104,6 @@ instance Eq Set where
 myEq :: Set -> Set      -> Bool
 myEq   (S [])    (S []) = True
 myEq   (S [])      _    = False
-myEq   _         (S []) = False
+myEq   _        (S []) = False
 myEq   (S [x])  (S [y]) = x == y
 myEq a@(S xs) b@(S ys)  = subsetSem2 a b && subsetSem2 b a -- For example S [ S[], S[S[]]] == S [ S[S[]] , S[] ] will be true.
