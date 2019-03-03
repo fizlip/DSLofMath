@@ -1,9 +1,10 @@
 newtype Tri a    = Tri (a, a ,a)
  deriving Show
+
 type TriFun a    = Tri (a -> a) -- = (a -> a, a -> a, a -> a)
 type FunTri a    = a -> Tri a   -- = a -> (a,a,a)
 
-
+type R = Double
 -- (Funktions värde, värde på f', värde på f'')
 data FunExp = Const Double
              | Id
@@ -65,21 +66,10 @@ instance Floating a => Floating (Tri a) where
  atanh = error "undefined"
 
 
-  -- (f, f', f'') :+: (g,g',g'') = (h,h',h'')
--- h  = f + g 
--- h' = f' + g'
--- h'' = f'' + g''
-
-
-
 addTri :: Num a => Tri a -> Tri a -> Tri a
 addTri (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f+g) , (f' + g') , (f'' + g''))
 
--- (f, f', f'') :*: (g,g',g'') = (h,h',h'')
--- h = f * g 
--- h' = D(f * g) = f' * g + f * g'
--- h'' = DD ( f * g ) = D (f' * g + f * g') = (f'' * g + f' * g') + (f' * g' + f * g'') 
--- (f'' * g + f' * g' ) + (f' * g' + f * g'')
+
 mulTri :: Num a => Tri a -> Tri a -> Tri a
 mulTri  (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f * g) , (f' * g + f * g') , g*f'' + f'*g'*f'*g' + f*g'')
 
@@ -88,11 +78,6 @@ minTri = undefined
 
 fromIntegerTri :: Integer -> Tri a
 fromIntegerTri = undefined
-
--- (f, f', f'') => (h, h', h'')
---h = sin f
---h' = cos f'
---h'' = -sin f''
 
 sinTri :: (Num a, Floating a) =>  Tri a -> Tri a
 sinTri (Tri (f, f', f'')) = Tri (sin f, cos f', -sin f'')
@@ -106,45 +91,8 @@ expTri (Tri (f, f', f'')) = undefined
 fromRationalTri :: Rational -> Tri a
 fromRationalTri = undefined
 
--- (f, f', f'') / (g, g', g'') => (h, h', h'')
--- h = f / g
--- h' = D ( f / g ) = ((g * f' ) - (f * g')) / g*g
--- h'' = DD ( f / g) = D ( ((g * f' ) - (f * g')) / g*g ) = 
-
-
 divTri ::(Num a, Fractional a) =>  Tri a -> Tri a -> Tri a
 divTri (Tri (f, f', f'')) (Tri (g, g', g'')) = Tri( (f / g) ,  (((g * f' ) - (f * g')) / g*g)       ,     ((g*g*f'' - g*f'*f'*g' - f*g''*g + f*f*g'*g') / g*g*g ))
-
-
---type FunTri a    = a -> Tri a   -- = a -> (a,a,a)
-evalDD :: FunExp -> FunTri a -- FunExp -> (FunExp -> (FunExp ,FunExp , FunExp,))
-evalDD e  = undefined--Tri(eval e, eval (derive e), eval (derive (derive e)))
-
-
-deriveTripple :: FunExp -> (FunExp, FunExp, FunExp)
-deriveTripple e = (e, derive e, derive (derive e))
-
-{-
-
-newtype Tri a    = Tri (a, a ,a)
- deriving Show
-type TriFun a    = Tri (a -> a) -- = (a -> a, a -> a, a -> a)
-type FunTri a    = a -> Tri a   -- = a -> (a,a,a)
-
--}
-
-derive :: FunExp -> FunExp 
-derive (Const a)   = Const 0
-derive Id          = Const 1
-derive (e1 :*: e2 :+: e3 :*: e4) = (derive (e1 :*: e2)) :+: (derive (e3 :*: e4)) -- a*b + c*d 
-derive (e1 :+: e2) = (derive e1 :+: derive e2)
-derive (e1 :*: e2) = (derive e1 :*: e2) :+: (e1 :*: derive e2)
-derive (Exp e)     = derive e :*: Exp e
-derive (Sin e)     = derive e :*: Cos (e)
-derive (Cos e)     = derive e :*: (Const (-1) :*: Sin (e))
-  
-
-
 
 --s.65 chap 3--
 
@@ -176,16 +124,74 @@ instance Floating a => Floating (x -> a) where
   asinh = \x -> asinh x
   acosh = \x -> acosh x
   atanh = \x -> atanh x
-{-
-type Func = Double -> Double
 
-eval ::  FunExp -> Double
-eval (Const a)   = a
+type Func = R -> R
+
+derive :: FunExp -> FunExp 
+derive (Const a)   = Const 0
+derive Id          = Const 1
+derive (e1 :*: e2 :+: e3 :*: e4) = (derive (e1 :*: e2)) :+: (derive (e3 :*: e4)) -- a*b + c*d 
+derive (e1 :+: e2) = (derive e1 :+: derive e2)
+derive (e1 :*: e2) = (derive e1 :*: e2) :+: (e1 :*: derive e2)
+derive (Exp e)     = derive e :*: Exp e
+derive (Sin e)     = derive e :*: Cos (e)
+derive (Cos e)     = derive e :*: (Const (-1) :*: Sin (e))
+
+eval :: FunExp -> Func
+eval (Const a)   = const a
 eval Id          = id
-eval (e1 :+: e2) = (eval e1) + (eval e2)
+eval (e1 :+: e2) = eval e1 + eval e2
 eval (e1 :*: e2) = eval e1 * eval e2
 eval (Exp e)     = exp (eval e)
--}
+eval (Sin e)     = sin (eval e)
+eval (Cos e)     = cos (eval e)
+
+eval' :: FunExp -> Func 
+eval' = eval.derive
+
+eval'' :: FunExp -> Func
+eval'' = eval.derive.derive
+
+evalDD :: FunExp -> Tri Func
+evalDD e = Tri (eval e, eval' e, eval'' e)
+
+{-
+--Strings. Chap 4. s.s73 --
+
+foldE :: (s -> s -> s) -> (s -> s -> s) -> (Integer -> s ) -> (E -> s)
+foldE add mul con = recip
+ where rec (Add x y) = add (rec x) (rec y)
+       rec (Mul x y) = mul (rec x) (rec y)
+       rec (Con i)   = con i
+ 
+ 
+prTop :: E -> String 
+prTop e = let (pTop,_,_) = prVersions e
+          in pTop
+
+type TV = (String, String, String) -- Three Versions
+
+prVersions :: E -> TV
+prVersions = foldE prVerAdd prVerMul prVerCon
+
+prVerAdd :: TV -> TV -> TV
+prVerAdd (xTop, xInA,   xInM) (yTop, yInA, yInM) =
+  let s = xInA ++ "+" ++ yInA -- use InA because we are "in Add"
+  in (s, paren s, paren s)
+
+prVerMul :: TV -> TV -> TV 
+prVerMul (xTop, xInA, xInM) (yTop, yInA, yInM) =
+  let s = xInM ++ "*" ++ yInM -- use InM because we are in "in Mul"
+  in (s, s, paren s)          -- parents only needed inside Mul
+
+prVerCon :: Integer -> TV
+prVerCon i = 
+  let s = show i
+  in (s,s,s)
+
+paren :: String -> String 
+paren s = "(" ++ s ++ ")"
+
 --Testing--
 
 e1 = Id :*: Id -- x^2 -- deriveTripple returns correct answer.
@@ -201,4 +207,4 @@ e6 = Exp (Id :*: Id) :+: (Const 2 :*: Id) -- e^(x^2 + 2x)
 -- evalDD (x * y) = evalDD :*: evalDD y
 -- * :: FunExp -> FunExp
 -- :*:  :: Tri a -> Tri a
-
+-}
