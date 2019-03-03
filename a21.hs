@@ -1,17 +1,11 @@
 newtype Tri a    = Tri (a, a ,a)
  deriving Show
-type TriFun a    = Tri (a -> a) 
-
-
-
-
-
--- = (a -> a, a -> a, a -> a)
+type TriFun a    = Tri (a -> a) -- = (a -> a, a -> a, a -> a)
 type FunTri a    = a -> Tri a   -- = a -> (a,a,a)
 
 
 -- (Funktions värde, värde på f', värde på f'')
-data FunExp = Const Rational
+data FunExp = Const Double
              | Id
              | FunExp :+: FunExp
              | FunExp :*: FunExp
@@ -121,33 +115,23 @@ fromRationalTri = undefined
 divTri ::(Num a, Fractional a) =>  Tri a -> Tri a -> Tri a
 divTri (Tri (f, f', f'')) (Tri (g, g', g'')) = Tri( (f / g) ,  (((g * f' ) - (f * g')) / g*g)       ,     ((g*g*f'' - g*f'*f'*g' - f*g''*g + f*f*g'*g') / g*g*g ))
 
-evalTri :: Tri a -> Integer
-evalTri = undefined
 
-evalDD :: FunExp -> FunTri a -- FunExp -> (a -> (a,a,a,))
-evalDD e = undefined
+--type FunTri a    = a -> Tri a   -- = a -> (a,a,a)
+evalDD :: FunExp -> FunTri a -- FunExp -> (FunExp -> (FunExp ,FunExp , FunExp,))
+evalDD e  = undefined--Tri(eval e, eval (derive e), eval (derive (derive e)))
 
 
 deriveTripple :: FunExp -> (FunExp, FunExp, FunExp)
 deriveTripple e = (e, derive e, derive (derive e))
 
-eval :: FunExp -> FunTri a
-eval e = undefined
+{-
 
-eval' :: FunExp -> FunExp
-eval' = undefined
+newtype Tri a    = Tri (a, a ,a)
+ deriving Show
+type TriFun a    = Tri (a -> a) -- = (a -> a, a -> a, a -> a)
+type FunTri a    = a -> Tri a   -- = a -> (a,a,a)
 
-eval'' :: FunExp -> FunExp
-eval'' = undefined
-
-f :: a -> (b,c,d)
-f = undefined
-
-pf :: (a -> b, a -> c, a -> d)
-pf = undefined
-  
-foo :: (a -> b, a -> c, a -> d) -> (a -> (b,c,d))
-foo  f = undefined
+-}
 
 derive :: FunExp -> FunExp 
 derive (Const a)   = Const 0
@@ -161,6 +145,47 @@ derive (Cos e)     = derive e :*: (Const (-1) :*: Sin (e))
   
 
 
+
+--s.65 chap 3--
+
+instance Num a => Num ( x -> a) where
+  f + g = \x -> f x + g x
+  f - g = \x -> f x - g x
+  f * g = \x -> f x * g x
+  negate f = negate.f
+  abs f    = abs.f
+  signum f = signum.f
+  fromInteger = const.fromInteger
+
+instance Fractional a => Fractional (x -> a) where
+  recip f = recip f
+  fromRational = const . fromRational
+
+instance Floating a => Floating (x -> a) where
+  pi = const pi
+  exp f = exp.f
+  f**g  = \x -> (f x) ** (g x)
+  sin   = \x -> sin x
+  cos   = \x -> cos x
+  log   = \x -> log x
+  asin  = \x -> asin x
+  acos  = \x -> acos x
+  atan  = \x -> atan x
+  sinh  = \x -> sinh x
+  cosh  = \x -> cosh x
+  asinh = \x -> asinh x
+  acosh = \x -> acosh x
+  atanh = \x -> atanh x
+{-
+type Func = Double -> Double
+
+eval ::  FunExp -> Double
+eval (Const a)   = a
+eval Id          = id
+eval (e1 :+: e2) = (eval e1) + (eval e2)
+eval (e1 :*: e2) = eval e1 * eval e2
+eval (Exp e)     = exp (eval e)
+-}
 --Testing--
 
 e1 = Id :*: Id -- x^2 -- deriveTripple returns correct answer.
@@ -176,3 +201,4 @@ e6 = Exp (Id :*: Id) :+: (Const 2 :*: Id) -- e^(x^2 + 2x)
 -- evalDD (x * y) = evalDD :*: evalDD y
 -- * :: FunExp -> FunExp
 -- :*:  :: Tri a -> Tri a
+
