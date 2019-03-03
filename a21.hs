@@ -137,11 +137,18 @@ derive :: FunExp -> FunExp
 derive (Const a)   = Const 0
 derive Id          = Const 1
 derive (e1 :+: e2) = derive e1 :+: derive e2
-derive (e1 :*: e2) = derive e1 :*: derive e2
+derive (e1 :*: e2) = derive e1 :*: e2 :+: e1 :*: derive e2
 derive (Exp e)     = Exp e :+: derive e
 derive (Sin e)     = Cos (derive e)
---derive (Cos e)     = Negate Sin (derive e)
+derive (Cos e)     = Const (-1) :*: Sin (derive e)
   
+
+
+--Testing--
+
+e1 = Id :*: Id
+e2 = Sin Id
+
 
 -- evalDD (x * y) = evalDD :*: evalDD y
 -- * :: FunExp -> FunExp
