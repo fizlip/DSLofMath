@@ -148,8 +148,8 @@ derive Id          = Const 1
 derive (e1 :+: e2) = derive e1 :+: derive e2
 derive (e1 :*: e2) = derive e1 :*: e2 :+: e1 :*: derive e2
 derive (Exp e)     = Exp e :+: derive e
-derive (Sin e)     = Cos (derive e)
-derive (Cos e)     = Const (-1) :*: Sin (derive e)
+derive (Sin e)     = derive e :*: Cos (e)
+derive (Cos e)     = derive e :*: Const (-1) :*: Sin (e)
   
 
 
