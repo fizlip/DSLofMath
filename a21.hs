@@ -15,7 +15,8 @@ data FunExp = Const Double
              | Sin FunExp
              | Cos FunExp 
             deriving (Eq)
-          
+
+{-      
 instance Show FunExp where -- show instance for FunExp, does not handle paranatheses.
   show Id                 = "x"
 --  show (Const 0 :*: e)    = ""
@@ -32,7 +33,7 @@ instance Show FunExp where -- show instance for FunExp, does not handle paranath
   show (Exp e)     = "e^(" ++ show e ++ ")"
   show (Sin e)     = "sin (" ++ show e ++ ")"
   show (Cos e)     = "cos(" ++ show e ++ ")"
-
+-}
 -- Define :: Num, Fractional, Floating and homorphism for evalDD
 
 instance Num a => Num (Tri a) where
@@ -126,6 +127,7 @@ instance Floating a => Floating (x -> a) where
   atanh = \x -> atanh x
 
 type Func = R -> R
+ 
 
 derive :: FunExp -> FunExp 
 derive (Const a)   = Const 0
@@ -196,9 +198,18 @@ foldE add mul con = rec
        rec (Mul x y) = mul (rec x) (rec y)
        rec (Con i)   = con i
  
+foldF :: (s -> s -> s) -> (s -> s -> s) -> (Double -> s ) -> (FunExp -> s)
+foldF add mul con     = rec
+  where rec (x :+: y) = add (rec x) (rec y)
+        rec (x :*: y) = mul (rec x) (rec y)
+        rec (Const i) = con i
 
 evalE1 :: E -> Integer
 evalE1 = foldE (+) (*) id
+
+
+evalF :: FunExp -> Double
+evalF = foldF (+) (*) id
 
 evalE2 :: Num a => E -> a
 evalE2 = foldE (+) (*) fromInteger
@@ -231,12 +242,16 @@ idE' = foldIE
 evalE' :: E -> Integer
 evalE' = foldIE
 
+
 -- Examples --
 seven :: IntExp a => a
 seven = add (con 3) (con 4)
 
 testI :: Integer 
 testI = seven
+
+testF :: FunExp
+testF = Id :*: Id
 
 testE :: E 
 testE = seven
@@ -345,11 +360,23 @@ om h = apply for some fixed c we have,
 
  -}
 
-applyTri :: a -> Tri a -> (a,a,a)
-applyTri c      (Tri (f, f', f'')) = Tri (f c, f' c, f'' c)
+applyTri :: a -> TriFun a -> Tri a
+applyTri c      (Tri (f, f', f'')) =Tri  (f c, f' c, f'' c)
 
+--op :: Num a => Tri a -> Tri a -> Tri a
+--(x,x',x'') op (y,y',y'') = (x * y, x' * y + x * y', undefined)  
+{-
+ newtonTri :: (Tri R -> Tri R) -> R -> R -> R
+ newtonTri f c x 
+                | evalDD . fst (applyTri c f) < c = x
+                | evalDD . snd (applyTri c f) != 0 = newtonTri f c next
+                | otherwise = newtonTri f c (x + c)
 
- 
+  where fx = f x
+        fx' = undefined -- f' x (derivative of f at x)
+        next = x - (fx / fx')
+
+-}
 --Testing--
 
 e1 = Id :*: Id -- x^2 -- deriveTripple returns correct answer.
