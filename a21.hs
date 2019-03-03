@@ -22,12 +22,15 @@ data FunExp = Const Rational
             deriving (Eq)
 instance Show FunExp where -- show instance for FunExp, does not handle paranatheses.
   show Id          = "x"
+  show (Const (-1) :*: e) = "-" ++ show e
+  show (Const (-1))= "-"
   show (Const a)   = show a
   show (e1 :+: e2) = show e1 ++ "+" ++ show e2
   show (e1 :*: e2) = show e1 ++ "*" ++ show e2
   show (Exp e)     = "e^(" ++ show e ++ ")"
   show (Sin e)     = "sin (" ++ show e ++ ")"
   show (Cos e)     = "cos(" ++ show e ++ ")"
+
 -- Define :: Num, Fractional, Floating and homorphism for evalDD
 
 instance Num a => Num (Tri a) where
