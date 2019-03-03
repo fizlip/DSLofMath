@@ -23,12 +23,13 @@ data FunExp = Const Rational
           
 instance Show FunExp where -- show instance for FunExp, does not handle paranatheses.
   show Id                 = "x"
-  show (Const 0 :*: e)    = ""
+--  show (Const 0 :*: e)    = ""
   show (Const 0 :+: Const 1) = "1"
   show (Const 1 :*: e)    = show e
   show (e :*: Const 1)    = show e
   show (Const (-1) :*: e) = "-" ++ show e
   show (Const (-1))       = "-"
+
 
   show (Const a)   = show a
   show (e1 :+: e2) = show e1 ++ "+" ++ show e2
@@ -151,23 +152,27 @@ foo  f = undefined
 derive :: FunExp -> FunExp 
 derive (Const a)   = Const 0
 derive Id          = Const 1
-derive (e1 :+: e2) = derive e1 :+: derive e2
+derive (e1 :*: e2 :+: e3 :*: e4) = (derive (e1 :*: e2)) :+: (derive (e3 :*: e4)) -- a*b + c*d 
+derive (e1 :+: e2) = (derive e1 :+: derive e2)
 derive (e1 :*: e2) = (derive e1 :*: e2) :+: (e1 :*: derive e2)
-derive (Exp e)     = Exp e :+: derive e
+derive (Exp e)     = derive e :*: Exp e
 derive (Sin e)     = derive e :*: Cos (e)
-derive (Cos e)     = derive e :*: Const (-1) :*: Sin (e)
+derive (Cos e)     = derive e :*: (Const (-1) :*: Sin (e))
   
 
 
 --Testing--
 
-a1 = Id :*: Id
-a1' = Const 1 :*: Id :+: Id :*: Const 1
+e1 = Id :*: Id -- x^2 -- deriveTripple returns correct answer.
 
+e2 = Sin Id -- sin x -- deriveTripple returns correct
 
-e2 = Sin Id
+e3 = Sin Id :*: Cos Id --sin x * cos x -- deriveTripple returns correct
 
+e4 = Id :*: Id :+: Const 2 :*: Id -- x * x + 2 * x -- derive returns correct as long as parantheses are correct.
+e5 = (Id :*: Id) :+: (Const 2 :*: Id) -- derive e4 == derive e5
 
+e6 = Exp (Id :*: Id) :+: (Const 2 :*: Id) -- e^(x^2 + 2x)
 -- evalDD (x * y) = evalDD :*: evalDD y
 -- * :: FunExp -> FunExp
 -- :*:  :: Tri a -> Tri a
