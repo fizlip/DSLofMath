@@ -20,10 +20,16 @@ data FunExp = Const Rational
              | Sin FunExp
              | Cos FunExp 
             deriving (Eq)
+          
 instance Show FunExp where -- show instance for FunExp, does not handle paranatheses.
-  show Id          = "x"
+  show Id                 = "x"
+  show (Const 0 :*: e)    = ""
+  show (Const 0 :+: Const 1) = "1"
+  show (Const 1 :*: e)    = show e
+  show (e :*: Const 1)    = show e
   show (Const (-1) :*: e) = "-" ++ show e
-  show (Const (-1))= "-"
+  show (Const (-1))       = "-"
+
   show (Const a)   = show a
   show (e1 :+: e2) = show e1 ++ "+" ++ show e2
   show (e1 :*: e2) = show e1 ++ "*" ++ show e2
@@ -78,9 +84,9 @@ addTri (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f+g) , (f' + g') , (f'' + g'')
 -- h = f * g 
 -- h' = D(f * g) = f' * g + f * g'
 -- h'' = DD ( f * g ) = D (f' * g + f * g') = (f'' * g + f' * g') + (f' * g' + f * g'') 
-
+-- (f'' * g + f' * g' ) + (f' * g' + f * g'')
 mulTri :: Num a => Tri a -> Tri a -> Tri a
-mulTri  (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f * g) , (f' * g + f * g') ,  (f'' * g + f' * g' ) + (f' * g' + f * g'')  )
+mulTri  (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f * g) , (f' * g + f * g') , g*f' + f'*f'*g' + f*g'')
 
 minTri :: Tri a -> Tri a -> Tri a
 minTri = undefined
@@ -122,7 +128,7 @@ evalDD e = undefined
 
 
 deriveTripple :: FunExp -> (FunExp, FunExp, FunExp)
-deriveTripple e = (e, derive e, derive $ derive e)
+deriveTripple e = (e, derive e, derive (derive e))
 
 eval :: FunExp -> FunTri a
 eval e = undefined
