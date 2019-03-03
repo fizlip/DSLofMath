@@ -86,7 +86,7 @@ addTri (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f+g) , (f' + g') , (f'' + g'')
 -- h'' = DD ( f * g ) = D (f' * g + f * g') = (f'' * g + f' * g') + (f' * g' + f * g'') 
 -- (f'' * g + f' * g' ) + (f' * g' + f * g'')
 mulTri :: Num a => Tri a -> Tri a -> Tri a
-mulTri  (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f * g) , (f' * g + f * g') , g*f' + f'*f'*g' + f*g'')
+mulTri  (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f * g) , (f' * g + f * g') , g*f'' + f'*g'*f'*g' + f*g'')
 
 minTri :: Tri a -> Tri a -> Tri a
 minTri = undefined
@@ -152,7 +152,7 @@ derive :: FunExp -> FunExp
 derive (Const a)   = Const 0
 derive Id          = Const 1
 derive (e1 :+: e2) = derive e1 :+: derive e2
-derive (e1 :*: e2) = derive e1 :*: e2 :+: e1 :*: derive e2
+derive (e1 :*: e2) = (derive e1 :*: e2) :+: (e1 :*: derive e2)
 derive (Exp e)     = Exp e :+: derive e
 derive (Sin e)     = derive e :*: Cos (e)
 derive (Cos e)     = derive e :*: Const (-1) :*: Sin (e)
@@ -161,7 +161,10 @@ derive (Cos e)     = derive e :*: Const (-1) :*: Sin (e)
 
 --Testing--
 
-e1 = Id :*: Id
+a1 = Id :*: Id
+a1' = Const 1 :*: Id :+: Id :*: Const 1
+
+
 e2 = Sin Id
 
 
