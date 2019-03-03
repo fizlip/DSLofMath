@@ -1,6 +1,12 @@
-newtype Tri a    = Tri (a,a,a)
+newtype Tri a    = Tri (a, a ,a)
  deriving Show
-type TriFun a    = Tri (a -> a) -- = (a -> a, a -> a, a -> a)
+type TriFun a    = Tri (a -> a) 
+
+
+
+
+
+-- = (a -> a, a -> a, a -> a)
 type FunTri a    = a -> Tri a   -- = a -> (a,a,a)
 
 
@@ -54,6 +60,8 @@ instance Floating a => Floating (Tri a) where
 -- h' = f' + g'
 -- h'' = f'' + g''
 
+
+
 addTri :: Num a => Tri a -> Tri a -> Tri a
 addTri (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f+g) , (f' + g') , (f'' + g''))
 
@@ -70,7 +78,6 @@ minTri = undefined
 
 fromIntegerTri :: Integer -> Tri a
 fromIntegerTri = undefined
-
 
 -- (f, f', f'') => (h, h', h'')
 --h = sin f
@@ -96,11 +103,46 @@ fromRationalTri = undefined
 
 
 divTri ::(Num a, Fractional a) =>  Tri a -> Tri a -> Tri a
-divTri (Tri (f, f', f'')) (Tri (g, g', g'')) = Tri( (f / g) , ((g * f' ) - (f * g')) / g*g , undefined  )
+divTri (Tri (f, f', f'')) (Tri (g, g', g'')) = Tri( (f / g) ,  (((g * f' ) - (f * g')) / g*g)       ,     ((g*g*f'' - g*f'*f'*g' - f*g''*g + f*f*g'*g') / g*g*g ))
 
 evalTri :: Tri a -> Integer
 evalTri = undefined
 
-evalDD :: FunExp -> FunTri a
-evalDD = undefined
+evalDD :: FunExp -> FunTri a -- FunExp -> (a -> (a,a,a,))
+evalDD e = undefined
 
+
+deriveTripple :: FunExp -> (FunExp, FunExp, FunExp)
+deriveTripple e = (e, derive e, derive $ derive e)
+
+eval :: FunExp -> FunTri a
+eval e = undefined
+
+eval' :: FunExp -> FunExp
+eval' = undefined
+
+eval'' :: FunExp -> FunExp
+eval'' = undefined
+
+f :: a -> (b,c,d)
+f = undefined
+
+pf :: (a -> b, a -> c, a -> d)
+pf = undefined
+  
+foo :: (a -> b, a -> c, a -> d) -> (a -> (b,c,d))
+foo  f = undefined
+
+derive :: FunExp -> FunExp 
+derive (Const a)   = Const 0
+derive Id          = Const 1
+derive (e1 :+: e2) = derive e1 :+: derive e2
+derive (e1 :*: e2) = derive e1 :*: derive e2
+derive (Exp e)     = Exp e :+: derive e
+derive (Sin e)     = Cos (derive e)
+--derive (Cos e)     = Negate Sin (derive e)
+  
+
+-- evalDD (x * y) = evalDD :*: evalDD y
+-- * :: FunExp -> FunExp
+-- :*:  :: Tri a -> Tri a
