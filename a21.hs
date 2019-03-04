@@ -76,11 +76,11 @@ addTri (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f+g) , (f' + g') , (f'' + g'')
 mulTri :: Num a => Tri a -> Tri a -> Tri a
 mulTri  (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f * g) , (f' * g + f * g') , g*f'' + f'*g'*f'*g' + f*g'')
 
-minTri :: Tri a -> Tri a -> Tri a
-minTri = undefined
+minTri :: Num a =>  Tri a -> Tri a -> Tri a
+minTri (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f-g) , (f' - g') , (f'' - g''))
 
-fromIntegerTri :: Integer -> Tri a
-fromIntegerTri = undefined
+fromIntegerTri :: Num a =>  Integer -> Tri a
+fromIntegerTri i = Tri (fromInteger i, 0,0)
 
 sinTri :: (Num a, Floating a) =>  Tri a -> Tri a
 sinTri (Tri (f, f', f'')) = Tri (sin f, f' * cos f, (f'' * cos f) + f' *(-sin f))
@@ -88,57 +88,17 @@ sinTri (Tri (f, f', f'')) = Tri (sin f, f' * cos f, (f'' * cos f) + f' *(-sin f)
 cosTri :: (Num a, Floating a) => Tri a -> Tri a
 cosTri (Tri (f,f', f'')) = Tri ( cos f, f' * (-sin f), (f'' * (-sin f)) + (f' *(-cos f)))
 
-expTri :: Tri a -> Tri a 
-expTri (Tri (f, f', f'')) = undefined
+expTri :: (Num a, Floating a) =>Tri a -> Tri a 
+expTri (Tri (f, f', f'')) = Tri (exp f, exp f * f', exp f * f' + exp f * f'')
 
-fromRationalTri :: Rational -> Tri a
-fromRationalTri = undefined
+fromRationalTri :: (Fractional a, Num a) => Rational -> Tri a
+fromRationalTri r = Tri (fromRational r, 0,0)
 
 divTri ::(Num a, Fractional a) =>  Tri a -> Tri a -> Tri a
 divTri (Tri (f, f', f'')) (Tri (g, g', g'')) = Tri( (f / g) ,  (((g * f' ) - (f * g')) / g*g)       ,     ((g*g*f'' - g*f'*f'*g' - f*g''*g + f*f*g'*g') / g*g*g ))
 
---s.65 chap 3--
-
-instance Num a => Num ( x -> a) where
-  f + g = \x -> f x + g x
-  f - g = \x -> f x - g x
-  f * g = \x -> f x * g x
-  negate f    = negate.f
-  abs f       = abs.f
-  signum f    = signum.f
-  fromInteger = const.fromInteger
-
-instance Fractional a => Fractional (x -> a) where
-  recip f      = recip f
-  fromRational = const . fromRational
-
-instance Floating a => Floating (x -> a) where
-  pi    = const pi
-  exp f = exp.f
-  f**g  = \x -> (f x) ** (g x)
-  sin   = \x -> sin x
-  cos   = \x -> cos x
-  log   = \x -> log x
-  asin  = \x -> asin x
-  acos  = \x -> acos x
-  atan  = \x -> atan x
-  sinh  = \x -> sinh x
-  cosh  = \x -> cosh x
-  asinh = \x -> asinh x
-  acosh = \x -> acosh x
-  atanh = \x -> atanh x
 
 type Func = R -> R
-
-x1 = Id :*: Id
-x2 = Sin Id
-
-a = evalDD x1
-b = evalDD x2
-c1 = evalDD x1 * evalDD x2
-c2 = evalDD (x1 :*: x2)
---check :: Bool
---check = evalDD x1 * evalDD x2 == evalDD ( x1 :*: x2)
 
 derive :: FunExp -> FunExp 
 derive (Const a)   = Const 0
@@ -166,9 +126,102 @@ eval' = eval . derive
 eval'' :: FunExp -> Func
 eval'' = eval . derive . derive
 
-evalDD :: FunExp -> TriFun (R) 
-evalDD e = Tri (eval e, eval' e, eval'' e)
 
+-- a -> (a,a,a) <=> (a -> a, a -> a, a -> a)
+
+evalDD :: (Floating a) => FunExp -> FunTri (a) 
+evalDD (Const a)   = \x -> Tri (x,0,0)
+evalDD Id          = \x -> Tri (x,1,0)
+evalDD (e1 :+: e2) = evalDD e1 + evalDD e2
+evalDD (e1 :*: e2) = evalDD e1 * evalDD e2
+evalDD (e1 :/: e2) = evalDD e1 / evalDD e2
+--evalDD (Sin Id   ) = \x -> Tri (sin x, cos x, -sin x)  
+evalDD (Sin e)     =  sin (evalDD e)
+evalDD (Cos e)     =  cos (evalDD e)
+evalDD (Exp e)     =  exp (evalDD e)
+
+
+--evalDD Sin (Id :*: Id)
+
+applyTri :: a -> TriFun a -> Tri a
+applyTri c      (Tri (f, f', f'')) =Tri  (f c, f' c, f'' c)
+
+
+instance Num a => Num ( x -> a) where
+  f + g = \x -> f x + g x
+  f - g = \x -> f x - g x
+  f * g = \x -> f x * g x
+  negate f    = negate.f
+  abs f       = abs.f
+  signum f    = signum.f
+  fromInteger = const.fromInteger
+
+instance Fractional a => Fractional (x -> a) where
+  recip f      = recip f
+  fromRational = const . fromRational
+
+instance Floating a => Floating (x -> a) where
+  pi    = const pi
+  exp   = \x -> exp x
+  f**g  = \x -> (f x) ** (g x)
+  sin   = \x -> sin x
+  cos   = \x -> cos x
+  log   = \x -> log x
+  asin  = \x -> asin x
+  acos  = \x -> acos x
+  atan  = \x -> atan x
+  sinh  = \x -> sinh x
+  cosh  = \x -> cosh x
+  asinh = \x -> asinh x
+  acosh = \x -> acosh x
+  atanh = \x -> atanh x
+
+
+{-
+g0 = applyTri 5 ((evalDD e1 * fst (evalDD e1)))
+g00 = applyTri 5 (evalDD (e1 :*: e1))
+g2 = applyTri 5 (evalDD e3)
+g3 = applyTri 5 (evalDD e4)
+g4 = applyTri 5 (evalDD e5)
+g5 = applyTri 5 (evalDD e6)
+
+{-
+newtonTri :: (Tri R -> Tri R) -> R -> R -> R
+newtonTri f c x = if abs fx < c
+	               then x
+	               else if fx' != 0 then newtonTri f c next
+	               	else newtonTri f c (x + c)
+ where fx = f x
+       fx' = undefined
+       next = x - ( fx / fx' )
+
+-}
+
+{-
+-- ( (a,a,a,) -> (a,a,a ))
+newtonTri :: (Tri R -> Tri R) -> R -> R -> R
+newtonTri f c x 
+                | abs f x < c = x
+                | f x /= 0   = newtonTri f c (x - (f x / f x))
+                | otherwise   = newtonTri f c ( x + c )
+ -}
+-- evalDD (e1) * evalDD(e1) == evalDD ( e1 :*: e1)
+
+--Testing--
+e1 = Id :*: Id -- x^2 -- deriveTripple returns correct answer.
+
+
+e2 = Cos Id -- sin x -- deriveTripple returns correct
+
+e3 = Sin Id :*: Cos Id --sin x * cos x -- deriveTripple returns correct
+
+e4 = Id :*: Id :+: Const 2 :*: Id -- x * x + 2 * x -- derive returns correct as long as parantheses are correct.
+e5 = (Id :*: Id) :+: (Const 2 :*: Id) -- derive e4 == derive e5
+
+e6 = Exp Id -- e^(x^2 + 2x)
+
+
+{-
 --Strings. Chap 4. s.s73 --
 data E = Add E E 
        | Mul E E 
@@ -280,10 +333,10 @@ testF2 = Const 2 :+: Const 2
 
 
 
-{-
+
 testE :: E 
 testE = seven
--}
+
 --End of Examples
 
 -- Chap 4. s.78 --
@@ -357,7 +410,7 @@ instance GoodClass FunExp where
   expF = Exp
   sinF = Sin
   cosF = Cos
-
+-}
 
 
 
@@ -392,46 +445,9 @@ om h = apply for some fixed c we have,
 
  -}
 
-applyTri :: a -> TriFun a -> Tri a
-applyTri c      (Tri (f, f', f'')) =Tri  (f c, f' c, f'' c)
 
-g0 = applyTri 5 (evalDD e1)
-g1 = applyTri 5 (evalDD e2)
-g2 = applyTri 5 (evalDD e3)
-g3 = applyTri 5 (evalDD e4)
-g4 = applyTri 5 (evalDD e5)
-g5 = applyTri 5 (evalDD e6)
-
---op :: Num a => Tri a -> Tri a -> Tri a
---(x,x',x'') op (y,y',y'') = (x * y, x' * y + x * y', undefined)  
-{-
- newtonTri :: (Tri R -> Tri R) -> R -> R -> R
- newtonTri f c x 
-                | evalDD . fst (applyTri c f) < c = x
-                | evalDD . snd (applyTri c f) != 0 = newtonTri f c next
-                | otherwise = newtonTri f c (x + c)
-
-  where fx = f x
-        fx' = undefined -- f' x (derivative of f at x)
-        next = x - (fx / fx')
-
--}
---Testing--
-
-
-
-
-e1 = Id :*: Id -- x^2 -- deriveTripple returns correct answer.
-
-e2 = Sin Id -- sin x -- deriveTripple returns correct
-
-e3 = Sin Id :*: Cos Id --sin x * cos x -- deriveTripple returns correct
-
-e4 = Id :*: Id :+: Const 2 :*: Id -- x * x + 2 * x -- derive returns correct as long as parantheses are correct.
-e5 = (Id :*: Id) :+: (Const 2 :*: Id) -- derive e4 == derive e5
-
-e6 = Exp (Id :*: Id) :+: (Const 2 :*: Id) -- e^(x^2 + 2x)
 -- evalDD (x * y) = evalDD :*: evalDD y
 -- * :: FunExp -> FunExp
 -- :*:  :: Tri a -> Tri a
 
+-}
