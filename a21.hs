@@ -1,5 +1,7 @@
 newtype Tri a    = Tri (a, a ,a)
- deriving Show
+ deriving (Show, Eq)
+
+
 
 type TriFun a    = Tri (a -> a) -- = (a -> a, a -> a, a -> a)
 type FunTri a    = a -> Tri a   -- = a -> (a,a,a)
@@ -16,7 +18,7 @@ data FunExp = Const Double
              | Cos FunExp 
             deriving (Eq)
 
-{-      
+  
 instance Show FunExp where -- show instance for FunExp, does not handle paranatheses.
   show Id                 = "x"
 --  show (Const 0 :*: e)    = ""
@@ -33,7 +35,7 @@ instance Show FunExp where -- show instance for FunExp, does not handle paranath
   show (Exp e)     = "e^(" ++ show e ++ ")"
   show (Sin e)     = "sin (" ++ show e ++ ")"
   show (Cos e)     = "cos(" ++ show e ++ ")"
--}
+
 -- Define :: Num, Fractional, Floating and homorphism for evalDD
 
 instance Num a => Num (Tri a) where
@@ -41,8 +43,8 @@ instance Num a => Num (Tri a) where
   (*)         = mulTri
   (-)         = minTri
   fromInteger = fromIntegerTri
-  abs         = error "no abs pls"
-  signum      = error "no signum either pls"
+  abs         = error "not implemented"
+  signum      = error "not implemented"
 
 
 instance Fractional a => Fractional (Tri a) where 
@@ -52,19 +54,19 @@ instance Fractional a => Fractional (Tri a) where
 
 
 instance Floating a => Floating (Tri a) where
- pi    = error "pi pls"
- log   = error "no blyat"
+ pi    = error "not implemented"
+ log   = error "not implemented"
  exp   = expTri
  sin   = sinTri
  cos   = cosTri
- asin  = error "undefined"
- acos  = error "undefined"
- atan  = error "undefined"
- sinh  = error "undefined"
- cosh  = error "undefined"
- asinh = error "undefined"
- acosh = error "undefined"
- atanh = error "undefined"
+ asin  = error "not implemented"
+ acos  = error "not implemented"
+ atan  = error "not implemented"
+ sinh  = error "not implemented"
+ cosh  = error "not implemented"
+ asinh = error "not implemented"
+ acosh = error "not implemented"
+ atanh = error "not implemented"
 
 
 addTri :: Num a => Tri a -> Tri a -> Tri a
@@ -81,10 +83,10 @@ fromIntegerTri :: Integer -> Tri a
 fromIntegerTri = undefined
 
 sinTri :: (Num a, Floating a) =>  Tri a -> Tri a
-sinTri (Tri (f, f', f'')) = Tri (sin f, cos f', -sin f'')
+sinTri (Tri (f, f', f'')) = Tri (sin f, f' * cos f, (f'' * cos f) + f' *(-sin f))
 
 cosTri :: (Num a, Floating a) => Tri a -> Tri a
-cosTri (Tri (f,f', f'')) = Tri ( -sin f, -cos f', sin f'')
+cosTri (Tri (f,f', f'')) = Tri ( cos f, f' * (-sin f), (f'' * (-sin f)) + (f' *(-cos f)))
 
 expTri :: Tri a -> Tri a 
 expTri (Tri (f, f', f'')) = undefined
@@ -101,17 +103,17 @@ instance Num a => Num ( x -> a) where
   f + g = \x -> f x + g x
   f - g = \x -> f x - g x
   f * g = \x -> f x * g x
-  negate f = negate.f
-  abs f    = abs.f
-  signum f = signum.f
+  negate f    = negate.f
+  abs f       = abs.f
+  signum f    = signum.f
   fromInteger = const.fromInteger
 
 instance Fractional a => Fractional (x -> a) where
-  recip f = recip f
+  recip f      = recip f
   fromRational = const . fromRational
 
 instance Floating a => Floating (x -> a) where
-  pi = const pi
+  pi    = const pi
   exp f = exp.f
   f**g  = \x -> (f x) ** (g x)
   sin   = \x -> sin x
@@ -127,7 +129,16 @@ instance Floating a => Floating (x -> a) where
   atanh = \x -> atanh x
 
 type Func = R -> R
- 
+
+x1 = Id :*: Id
+x2 = Sin Id
+
+a = evalDD x1
+b = evalDD x2
+c1 = evalDD x1 * evalDD x2
+c2 = evalDD (x1 :*: x2)
+--check :: Bool
+--check = evalDD x1 * evalDD x2 == evalDD ( x1 :*: x2)
 
 derive :: FunExp -> FunExp 
 derive (Const a)   = Const 0
@@ -139,6 +150,7 @@ derive (Exp e)     = derive e :*: Exp e
 derive (Sin e)     = derive e :*: Cos (e)
 derive (Cos e)     = derive e :*: (Const (-1) :*: Sin (e))
 
+
 eval :: FunExp -> Func
 eval (Const a)   = const a
 eval Id          = id
@@ -148,15 +160,14 @@ eval (Exp e)     = exp (eval e)
 eval (Sin e)     = sin (eval e)
 eval (Cos e)     = cos (eval e)
 
-eval' :: FunExp -> Func 
-eval' = eval.derive
+eval' :: FunExp -> Func
+eval' = eval . derive
 
 eval'' :: FunExp -> Func
-eval'' = eval.derive.derive
+eval'' = eval . derive . derive
 
-evalDD :: FunExp -> Tri Func
+evalDD :: FunExp -> TriFun (R) 
 evalDD e = Tri (eval e, eval' e, eval'' e)
-
 
 --Strings. Chap 4. s.s73 --
 data E = Add E E 
@@ -193,13 +204,14 @@ paren s = "(" ++ s ++ ")"
 
 
 foldE :: (s -> s -> s) -> (s -> s -> s) -> (Integer -> s ) -> (E -> s)
-foldE add mul con = rec
- where rec (Add x y) = add (rec x) (rec y)
+foldE add1 mul con = rec
+ where rec (Add x y) = add1 (rec x) (rec y)
        rec (Mul x y) = mul (rec x) (rec y)
        rec (Con i)   = con i
  
+ 
 foldF :: (s -> s -> s) -> (s -> s -> s) -> (Double -> s ) -> (FunExp -> s)
-foldF add mul con     = rec
+foldF add mul con  = rec
   where rec (x :+: y) = add (rec x) (rec y)
         rec (x :*: y) = mul (rec x) (rec y)
         rec (Const i) = con i
@@ -223,9 +235,6 @@ class IntExp t where
  mul :: t -> t -> t
  con :: Integer -> t
 
-foldIE :: IntExp t => E -> t
-foldIE = foldE add mul con 
-
 instance IntExp E where
   add = Add
   mul = Mul
@@ -235,6 +244,15 @@ instance IntExp Integer where
  add = (+)
  mul = (*)
  con = id
+
+foldIE :: IntExp t => E -> t
+foldIE = foldE add mul con 
+{-
+instance IntExp FunExp where
+	add = (:+:)
+	mul = (:*:)
+	con = Const
+-}
 
 idE' :: E -> E
 idE' = foldIE
@@ -253,9 +271,19 @@ testI = seven
 testF :: FunExp
 testF = Id :*: Id
 
+testF1 :: FunExp
+testF1 = Const 1 :+: Const 1
+
+testF2 :: FunExp
+testF2 = Const 2 :+: Const 2
+
+
+
+
+{-
 testE :: E 
 testE = seven
-
+-}
 --End of Examples
 
 -- Chap 4. s.78 --
@@ -298,7 +326,9 @@ class GoodClass t where
   sinF   :: t -> t
   cosF   :: t -> t
 
-instance Num a => GoodClass (Tri (a)) where
+newtype TriF a = TriF (a -> a, a -> a, a -> a)
+
+instance Num a => GoodClass (Tri a) where
  constF = evalDDConst
  addF   = evalDDApp
  mulF   = evalDDMul
@@ -329,6 +359,8 @@ instance GoodClass FunExp where
   cosF = Cos
 
 
+
+
 {- Kompilerar inte s.80 
 instance GoodClass (R -> R) where
   constF = const
@@ -338,7 +370,7 @@ instance GoodClass (R -> R) where
   ...
   -}
 
-{- In Sec. 3.6.1, we dened a Num instance for functions with a Num codomain. If we have an
+{- In Sec. 3.6.1, we need a Num instance for functions with a Num codomain. If we have an
 element of the domain of such a function, we can use it to obtain a homomorphism from functions
 to their codomains: -}
  
@@ -363,6 +395,13 @@ om h = apply for some fixed c we have,
 applyTri :: a -> TriFun a -> Tri a
 applyTri c      (Tri (f, f', f'')) =Tri  (f c, f' c, f'' c)
 
+g0 = applyTri 5 (evalDD e1)
+g1 = applyTri 5 (evalDD e2)
+g2 = applyTri 5 (evalDD e3)
+g3 = applyTri 5 (evalDD e4)
+g4 = applyTri 5 (evalDD e5)
+g5 = applyTri 5 (evalDD e6)
+
 --op :: Num a => Tri a -> Tri a -> Tri a
 --(x,x',x'') op (y,y',y'') = (x * y, x' * y + x * y', undefined)  
 {-
@@ -378,6 +417,9 @@ applyTri c      (Tri (f, f', f'')) =Tri  (f c, f' c, f'' c)
 
 -}
 --Testing--
+
+
+
 
 e1 = Id :*: Id -- x^2 -- deriveTripple returns correct answer.
 
