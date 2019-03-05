@@ -1,3 +1,5 @@
+import Data.List
+
 newtype Tri a    = Tri (a, a ,a)
  deriving (Show, Eq)
 
@@ -18,7 +20,6 @@ data FunExp = Const Double
              | Cos FunExp 
             deriving (Eq)
 
-  
 instance Show FunExp where -- show instance for FunExp, does not handle paranatheses.
   show Id                 = "x"
 --  show (Const 0 :*: e)    = ""
@@ -86,7 +87,7 @@ sinTri :: (Num a, Floating a) =>  Tri a -> Tri a
 sinTri (Tri (f, f', f'')) = Tri (sin f, f' * cos f, (f'' * cos f) + f' *(-sin f))
 
 cosTri :: (Num a, Floating a) => Tri a -> Tri a
-cosTri (Tri (f,f', f'')) = Tri ( cos f, f' * (-sin f), (f'' * (-sin f)) + (f' *(-cos f)))
+cosTri (Tri (f,f', f'')) = Tri (cos f, f' * (-sin f), (f'' * (-sin f)) + (f' *(-cos f)))
 
 expTri :: (Num a, Floating a) =>Tri a -> Tri a 
 expTri (Tri (f, f', f'')) = Tri (exp f, exp f * f', exp f * f' + exp f * f'')
@@ -98,54 +99,45 @@ divTri ::(Num a, Fractional a) =>  Tri a -> Tri a -> Tri a
 divTri (Tri (f, f', f'')) (Tri (g, g', g'')) = Tri( (f / g) ,  (((g * f' ) - (f * g')) / g*g)       ,     ((g*g*f'' - g*f'*f'*g' - f*g''*g + f*f*g'*g') / g*g*g ))
 
 
-type Func = R -> R
-
-derive :: FunExp -> FunExp 
-derive (Const a)   = Const 0
-derive Id          = Const 1
-derive (e1 :*: e2 :+: e3 :*: e4) = (derive (e1 :*: e2)) :+: (derive (e3 :*: e4)) -- a*b + c*d 
-derive (e1 :+: e2) = (derive e1 :+: derive e2)
-derive (e1 :*: e2) = (derive e1 :*: e2) :+: (e1 :*: derive e2)
-derive (Exp e)     = derive e :*: Exp e
-derive (Sin e)     = derive e :*: Cos (e)
-derive (Cos e)     = derive e :*: (Const (-1) :*: Sin (e))
-
-
-eval :: FunExp -> Func
-eval (Const a)   = const a
-eval Id          = id
-eval (e1 :+: e2) = eval e1 + eval e2
-eval (e1 :*: e2) = eval e1 * eval e2
-eval (Exp e)     = exp (eval e)
-eval (Sin e)     = sin (eval e)
-eval (Cos e)     = cos (eval e)
-
-eval' :: FunExp -> Func
-eval' = eval . derive
-
-eval'' :: FunExp -> Func
-eval'' = eval . derive . derive
-
+--type Func = R -> R
 
 -- a -> (a,a,a) <=> (a -> a, a -> a, a -> a)
 
-evalDD :: (Floating a) => FunExp -> FunTri (a) 
+evalDD :: (Floating a) => FunExp -> FunTri a
 evalDD (Const a)   = \x -> Tri (x,0,0)
 evalDD Id          = \x -> Tri (x,1,0)
-evalDD (e1 :+: e2) = evalDD e1 + evalDD e2
-evalDD (e1 :*: e2) = evalDD e1 * evalDD e2
-evalDD (e1 :/: e2) = evalDD e1 / evalDD e2
---evalDD (Sin Id   ) = \x -> Tri (sin x, cos x, -sin x)  
+evalDD (e1 :+: e2) =  evalDD e1 + evalDD e2
+evalDD (e1 :*: e2) =  evalDD e1 * evalDD e2
+evalDD (e1 :/: e2) =  evalDD e1 / evalDD e2
 evalDD (Sin e)     =  sin (evalDD e)
 evalDD (Cos e)     =  cos (evalDD e)
 evalDD (Exp e)     =  exp (evalDD e)
 
 
 --evalDD Sin (Id :*: Id)
+a :: FunTri Double
+a = evalDD (f1 :*: f2)
 
-applyTri :: a -> TriFun a -> Tri a
-applyTri c      (Tri (f, f', f'')) =Tri  (f c, f' c, f'' c)
+b :: FunTri Double
+b = evalDD f1 * evalDD f2
 
+check :: Double -> Bool
+check x = applyTri a x == applyTri b x
+
+checkerino :: [Double]
+checkerino = [ x | x <- [-1000..1000], not $ check x]
+--evalute LH: evalDD ( x :*: y ) -> 
+
+applyTri :: Floating a =>  FunTri a -> a ->  Tri a
+applyTri f c = f c
+
+--Testing--
+f1 = Id :*: Id
+f2 = Sin Id
+
+e1 = evalDD (Id :*: Id)
+e2 = evalDD (Sin Id)
+e3 = evalDD (Id)
 
 instance Num a => Num ( x -> a) where
   f + g = \x -> f x + g x
@@ -161,293 +153,92 @@ instance Fractional a => Fractional (x -> a) where
   fromRational = const . fromRational
 
 instance Floating a => Floating (x -> a) where
-  pi    = const pi
-  exp   = \x -> exp x
-  f**g  = \x -> (f x) ** (g x)
-  sin   = \x -> sin x
-  cos   = \x -> cos x
-  log   = \x -> log x
-  asin  = \x -> asin x
-  acos  = \x -> acos x
-  atan  = \x -> atan x
-  sinh  = \x -> sinh x
-  cosh  = \x -> cosh x
-  asinh = \x -> asinh x
-  acosh = \x -> acosh x
-  atanh = \x -> atanh x
+  pi      = const pi
+  exp f   = exp . f
+  f**g    = \x -> (f x) ** (g x)
+  sin f   = sin . f
+  cos f   = sin . f
+  log f   = log . f
+  asin f  = asin . f
+  acos f  = acos . f
+  atan f  = atan . f
+  sinh f  = sinh . f
+  cosh  f = cosh . f
+  asinh f = asinh . f
+  acosh f = acosh . f
+  atanh f = atanh . f
 
 
-{-
-g0 = applyTri 5 ((evalDD e1 * fst (evalDD e1)))
-g00 = applyTri 5 (evalDD (e1 :*: e1))
-g2 = applyTri 5 (evalDD e3)
-g3 = applyTri 5 (evalDD e4)
-g4 = applyTri 5 (evalDD e5)
-g5 = applyTri 5 (evalDD e6)
+apply :: (Tri R -> FunExp -> Tri R)
+apply = undefined
 
-{-
 newtonTri :: (Tri R -> Tri R) -> R -> R -> R
 newtonTri f c x = if abs fx < c
-	               then x
-	               else if fx' != 0 then newtonTri f c next
-	               	else newtonTri f c (x + c)
- where fx = f x
-       fx' = undefined
-       next = x - ( fx / fx' )
+                    then x
+                    else if fx' /= 0 then newtonTri f c next
+                                        else newtonTri f c ( x + c )
+          where  fx   = sndTri (f (Tri (x,1,0)))
+                 fx'  = thdTri (f (Tri (x,1,0)))
+                 next = x - (fx / fx')
 
+
+
+
+fstTri :: Tri a -> a
+fstTri (Tri (x,_,_)) = x
+
+sndTri :: Tri a -> a
+sndTri (Tri (_,x,_)) = x
+
+thdTri :: Tri a -> a
+thdTri (Tri (_,_,x)) = x
+{-
+test0 :: Tri R -> Tri R
+test0 (Tri (x,1,0)) = Tri (x*x, 2*x, 2)
+
+test1 :: Tri R -> Tri R
+test1 (Tri (x,1,0)) = Tri (x^2-1, 2*x, 2)
+
+test2 :: Tri R -> Tri R
+test2 (Tri (x,1,0)) = Tri (sin x, cos x, -sin x)
 -}
 
+test0 x = x^2
+
+test1 x = x^2 -1
+
+test2 x = sin x
+
+newtonT f = map (newtonTri f 0.001) [-2.0, -1.5..2.0]
+
+optimT f = map (optim f 0.01) [-2.0, -1.5..4.0]
+
+newtonList :: (Fractional a, Ord a) =>  (a -> a) -> a -> a -> [a]
+newtonList f c x = undefined -- map (newtonTri f c) [-2.0, -1.5..2.0]
+
+--newton f c x = last (newtonList f c x)
+
+--newton = newtonTri f x c >= -c && newtonTri f x c <= c 
+
+data Result a = Maximum R | Minimum R | Dunno R
+ deriving Show
+
+optim :: (Tri R -> Tri R) -> R -> R -> Result R
+optim f e x   | sndDeriv < 0 = Maximum y
+              | sndDeriv > 0 = Minimum y
+              | otherwise   = Dunno y
+
+   where xTurn = newtonTri f e x
+         fx    = f (Tri (xTurn, 1,0))
+         y     = fstTri (fx)
+         sndDeriv = thdTri (fx)       
+                  -- if ( newtonTri f' x c < 0) then Minimum (newtonTri f' x c)
 {-
--- ( (a,a,a,) -> (a,a,a ))
-newtonTri :: (Tri R -> Tri R) -> R -> R -> R
-newtonTri f c x 
-                | abs f x < c = x
-                | f x /= 0   = newtonTri f c (x - (f x / f x))
-                | otherwise   = newtonTri f c ( x + c )
- -}
--- evalDD (e1) * evalDD(e1) == evalDD ( e1 :*: e1)
-
---Testing--
-e1 = Id :*: Id -- x^2 -- deriveTripple returns correct answer.
-
-
-e2 = Cos Id -- sin x -- deriveTripple returns correct
-
-e3 = Sin Id :*: Cos Id --sin x * cos x -- deriveTripple returns correct
-
-e4 = Id :*: Id :+: Const 2 :*: Id -- x * x + 2 * x -- derive returns correct as long as parantheses are correct.
-e5 = (Id :*: Id) :+: (Const 2 :*: Id) -- derive e4 == derive e5
-
-e6 = Exp Id -- e^(x^2 + 2x)
-
-
-{-
---Strings. Chap 4. s.s73 --
-data E = Add E E 
-       | Mul E E 
-       | Con Integer 
- deriving Eq
  
-prTop :: E -> String 
-prTop e = let (pTop,_,_) = prVersions e
-          in pTop
+ optim -> a use newtonTri to find zer of f' starting from x. 
+           if( y is within c of 0) then a = y
 
-type TV = (String, String, String) -- Three Versions
-
-prVersions :: E -> TV
-prVersions = foldE prVerAdd prVerMul prVerCon
-
-prVerAdd :: TV -> TV -> TV
-prVerAdd (xTop, xInA,   xInM) (yTop, yInA, yInM) =
-  let s = xInA ++ "+" ++ yInA -- use InA because we are "in Add"
-  in (s, paren s, paren s)
-
-prVerMul :: TV -> TV -> TV 
-prVerMul (xTop, xInA, xInM) (yTop, yInA, yInM) =
-  let s = xInM ++ "*" ++ yInM -- use InM because we are in "in Mul"
-  in (s, s, paren s)          -- parents only needed inside Mul
-
-prVerCon :: Integer -> TV
-prVerCon i = 
-  let s = show i
-  in (s,s,s)
-
-paren :: String -> String 
-paren s = "(" ++ s ++ ")"
-
-
-foldE :: (s -> s -> s) -> (s -> s -> s) -> (Integer -> s ) -> (E -> s)
-foldE add1 mul con = rec
- where rec (Add x y) = add1 (rec x) (rec y)
-       rec (Mul x y) = mul (rec x) (rec y)
-       rec (Con i)   = con i
- 
- 
-foldF :: (s -> s -> s) -> (s -> s -> s) -> (Double -> s ) -> (FunExp -> s)
-foldF add mul con  = rec
-  where rec (x :+: y) = add (rec x) (rec y)
-        rec (x :*: y) = mul (rec x) (rec y)
-        rec (Const i) = con i
-
-evalE1 :: E -> Integer
-evalE1 = foldE (+) (*) id
-
-
-evalF :: FunExp -> Double
-evalF = foldF (+) (*) id
-
-evalE2 :: Num a => E -> a
-evalE2 = foldE (+) (*) fromInteger
-
-idE :: E -> E 
-idE = foldE Add Mul Con
-
-
-class IntExp t where
- add :: t -> t -> t
- mul :: t -> t -> t
- con :: Integer -> t
-
-instance IntExp E where
-  add = Add
-  mul = Mul
-  con = Con
-
-instance IntExp Integer where
- add = (+)
- mul = (*)
- con = id
-
-foldIE :: IntExp t => E -> t
-foldIE = foldE add mul con 
-{-
-instance IntExp FunExp where
-	add = (:+:)
-	mul = (:*:)
-	con = Const
--}
-
-idE' :: E -> E
-idE' = foldIE
-
-evalE' :: E -> Integer
-evalE' = foldIE
-
-
--- Examples --
-seven :: IntExp a => a
-seven = add (con 3) (con 4)
-
-testI :: Integer 
-testI = seven
-
-testF :: FunExp
-testF = Id :*: Id
-
-testF1 :: FunExp
-testF1 = Const 1 :+: Const 1
-
-testF2 :: FunExp
-testF2 = Const 2 :+: Const 2
-
-
-
-
-
-testE :: E 
-testE = seven
-
---End of Examples
-
--- Chap 4. s.78 --
-
-instance Num FunExp where 
-  (+)           = (:+:)
-  (*)           = (:*:)
-  fromInteger   = Const . fromInteger
-  abs           = error "not implemented"
-  signum        = error "not implemented"
-  negate        = error "not implemeneted"
-
-instance Fractional FunExp where 
-    recip e      = Const 1 :/: e    -- returns 1 / argument
-    fromRational = Const . fromRational
-
-instance Floating FunExp where 
-  exp   = Exp
-  sin   = Sin
-  cos   = Cos
-  pi    = pi
-  log   = log 
-  asin  = asin
-  acos  = acos
-  atan  = atan
-  sinh  = sinh 
-  cosh  = cosh 
-  asinh = asinh 
-  acosh = acosh 
-  atanh = atanh
-
-
-class GoodClass t where
-  constF :: R -> t
-  addF   :: t -> t -> t
-  mulF   :: t -> t -> t
-  divF   :: t -> t -> t
-  expF   :: t -> t
-  idF    :: t
-  sinF   :: t -> t
-  cosF   :: t -> t
-
-newtype TriF a = TriF (a -> a, a -> a, a -> a)
-
-instance Num a => GoodClass (Tri a) where
- constF = evalDDConst
- addF   = evalDDApp
- mulF   = evalDDMul
- divF   = evalDDDiv
- expF   = evalDDExp
- idF    = evalDDId
- sinF   = evalDDSin
- cosF   = evalDDCos
-
-
-evalDDConst = error "not implemented"
-evalDDApp   = error "not implemented"
-evalDDMul   = error "not implemented"
-evalDDDiv   = error "not implemented"
-evalDDExp   = error "not implemented"
-evalDDId    = error "not implemented"
-evalDDSin   = error "not implemented"
-evalDDCos   = error "not implemented"
-
-instance GoodClass FunExp where
-  constF = Const
-  idF  = Id
-  addF = (:+:)
-  mulF = (:*:)
-  divF = (:/:)
-  expF = Exp
-  sinF = Sin
-  cosF = Cos
--}
-
-
-
-{- Kompilerar inte s.80 
-instance GoodClass (R -> R) where
-  constF = const
-  idF  = id
-  addF = (+)
-  mulF = (*)
-  ...
-  -}
-
-{- In Sec. 3.6.1, we need a Num instance for functions with a Num codomain. If we have an
-element of the domain of such a function, we can use it to obtain a homomorphism from functions
-to their codomains: -}
- 
- --Num a => x -> (x -> a) -> a
-
- {- As suggested by the type, the homomorphism is just funciton application: -}
-
-{- Kompilerar inte -
-
-apply :: a -> (a -> b) -> b
-apply a = \f -> f a
-
-om h = apply for some fixed c we have, 
-
- h ( f + g) = {- def apply -}
- (f + g ) c = {- def + for functions -}
- f c + g c  = {- def apply -}
- h f + h g etc.
-
- -}
-
-
--- evalDD (x * y) = evalDD :*: evalDD y
--- * :: FunExp -> FunExp
--- :*:  :: Tri a -> Tri a
-
+           if ( f'' y < 0 ) then min y
+           if (f'' y  > 0 ) then max y
+           else Dunno y 
 -}
