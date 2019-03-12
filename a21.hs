@@ -192,3 +192,38 @@ testy11 x = x^3 - x^2
 newtonT f = map (newtonTri f 0.01) [-2.0, -1.5..2.0]
 
 optimT f = map (optim f 0.01) [-2.0, -1.5..4.0]
+
+
+
+{-
+
+Let eval'' = eval . derive . derive
+
+Prove that eval'' is not a homomorphism from FunExp to (R -> R) / FunSem
+
+eval'' (x (op) y) == eval'' x (Op) eval'' y
+
+If there exists a operator where this does not hold then eval'' is not a homomorphism form FunExp to FunSem.
+
+type FunSem = R -> R
+
+eval'' :: FunExp -> (R -> R)
+op     :: FunExp -> FunExp -> FunExp
+Op     :: FunSem -> FunSem -> FunSem
+
+Let op be  (:*:) and Op (*) 
+
+instance Num (x -> a)
+ f * g = \x -> f x * g x
+
+ and 
+
+:*: e1 e2 = e1 :*: e2
+
+then 
+
+LHS : eval'' (x :*: y) = eval . derive . derive ( x :*: y) = eval . derive (x' :*: y :+: x :*: y') = eval (x'' :*: y' :+: y' :*: x') :+: 
+
+RHS eval'' x * eval '' y = x'' * y'' = \x -> x'' x * y'' x
+
+}
