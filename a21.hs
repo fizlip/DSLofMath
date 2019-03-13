@@ -1,11 +1,50 @@
+{-
+ 1 a)
+
+Let eval'' = eval . derive . derive
+
+Prove that eval'' is not a homomorphism from FunExp to (R -> R) / FunSem
+
+eval'' (x (op) y) == eval'' x (Op) eval'' y
+
+If there exists a operator where this does not hold then eval'' is not a homomorphism from FunExp to FunSem.
+
+type FunSem = R -> R
+
+eval'' :: FunExp -> (R -> R)
+op     :: FunExp -> FunExp -> FunExp
+Op     :: FunSem -> FunSem -> FunSem
+
+Let op = (:*:) and Op = (*) 
+
+Multiplication for functions (x -> a) is defined as
+
+instance Num a => Num (x -> a)
+ f * g = \x -> f x * g x
+
+ and multiplication for FunExp's as,
+
+:*: e1 e2 = e1 :*: e2.
+
+then 
+
+LHS : eval'' (x :*: y) = eval . derive . derive ( x :*: y) = eval . derive (x' :*: y :+: x :*: y') = eval (x'' :*: y' :+: y' :*: x') :+: ...
+
+RHS eval'' x * eval '' y = x'' * y'' = \x -> x'' x * y'' x
+
+Since LHS /= RHS eval'' can't be a homomorphism for any operator from FunExp to FunSem.
+-}
+
+
+
 
 newtype Tri a    = Tri (a, a ,a)
  deriving (Show, Eq)
-type TriFun a    = Tri (a -> a) -- = (a -> a, a -> a, a -> a)
-type FunTri a    = a -> Tri a   -- = a -> (a,a,a)
+type TriFun a    = Tri (a -> a) 
+type FunTri a    = a -> Tri a   
 
 type R = Double
--- (Funktions värde, värde på f', värde på f'')
+
 data FunExp = Const Double
              | Id
              | FunExp :+: FunExp
@@ -58,8 +97,6 @@ minTri (Tri (f,f',f'')) (Tri (g,g',g'')) = Tri ( (f-g) , (f' - g') , (f'' - g'')
 
 fromIntegerTri :: Num a =>  Integer -> Tri a
 fromIntegerTri i = Tri (fromInteger i, 0,0)
-
-
 
 sinTri :: (Num a, Floating a) =>  Tri a -> Tri a
 sinTri (Tri (f, f', f'')) = Tri (sin f, f' * cos f, (f'' * cos f) + (f' * f' * (-sin f)))
@@ -137,7 +174,7 @@ instance Floating a => Floating (x -> a) where
 newtonTri :: (Tri R -> Tri R) -> R -> R -> R
 newtonTri f c x = if abs fx < c
                     then x
-                    else if fx' /= 0 then newtonTri f c next
+                    else if fx' /= 0    then newtonTri f c next
                                         else newtonTri f c ( x + c )
           where  fx   = fstTri (f (Tri (x,1,0)))
                  fx'  = sndTri (f (Tri (x,1,0)))
@@ -146,8 +183,8 @@ newtonTri f c x = if abs fx < c
 newtonTri' :: (Tri R -> Tri R) -> R -> R -> R
 newtonTri' f c x = if abs fx < c
                     then x
-                    else if fx' /= 0 then newtonTri f c next
-                                        else newtonTri f c ( x + c )
+                    else if fx' /= 0    then newtonTri' f c next
+                                        else newtonTri' f c ( x + c )
           where  fx   = sndTri (f (Tri (x,1,0)))
                  fx'  = thdTri (f (Tri (x,1,0)))
                  next = x - (fx / fx')
@@ -171,9 +208,9 @@ optim f e x   | sndDeriv < 0 = Maximum y
               | sndDeriv > 0 = Minimum y
               | otherwise   = Dunno y
 
-   where xTurn = newtonTri' f e x
-         fx    = f (Tri (xTurn, 1,0))
-         y     = fstTri (fx)
+   where xTurn    = newtonTri' f e x
+         fx       = f (Tri (xTurn, 1,0))
+         y        = fstTri (fx)
          sndDeriv = thdTri (fx)       
 
 --Testing--
@@ -181,7 +218,16 @@ test0 x = x^2
 
 test1 x = x^2 -1
 
+
 test2 x = sin x
+
+test3 x = cos x * cos x + sin x * sin x -- Will not produce a result since its equal to 1
+
+test4 x = 1 -- same as test3.
+
+test5 x = sin x * cos x
+
+test6 x = exp sin x + 5*x^3
 
 testy x = 5*x^3 + 2*x^2 - 3*x
 
@@ -193,37 +239,5 @@ newtonT f = map (newtonTri f 0.01) [-2.0, -1.5..2.0]
 
 optimT f = map (optim f 0.01) [-2.0, -1.5..4.0]
 
+newontT test = map (newtonTri test 0.001) [-2.0, -1.5..2.0]
 
-
-{-
-
-Let eval'' = eval . derive . derive
-
-Prove that eval'' is not a homomorphism from FunExp to (R -> R) / FunSem
-
-eval'' (x (op) y) == eval'' x (Op) eval'' y
-
-If there exists a operator where this does not hold then eval'' is not a homomorphism form FunExp to FunSem.
-
-type FunSem = R -> R
-
-eval'' :: FunExp -> (R -> R)
-op     :: FunExp -> FunExp -> FunExp
-Op     :: FunSem -> FunSem -> FunSem
-
-Let op be  (:*:) and Op (*) 
-
-instance Num (x -> a)
- f * g = \x -> f x * g x
-
- and 
-
-:*: e1 e2 = e1 :*: e2
-
-then 
-
-LHS : eval'' (x :*: y) = eval . derive . derive ( x :*: y) = eval . derive (x' :*: y :+: x :*: y') = eval (x'' :*: y' :+: y' :*: x') :+: 
-
-RHS eval'' x * eval '' y = x'' * y'' = \x -> x'' x * y'' x
-
-}
